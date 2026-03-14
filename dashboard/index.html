@@ -1,0 +1,254 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEC EDGAR Lakehouse — Data Engineering Portfolio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#060912;--bg2:#0d1117;--bg3:#161b27;--bg4:#1c2333;
+  --border:#21293d;--text:#e6edf3;--muted:#7d8fa1;--dim:#3d4f63;
+  --blue:#388bfd;--blue-dim:#1a3a6b;--green:#3fb950;--green-dim:#1a3a24;
+  --amber:#d29922;--amber-dim:#3a2f10;--purple:#bc8cff;--purple-dim:#2d1f4a;
+  --red:#f85149;--teal:#39c5cf;--teal-dim:#0f2e33;--orange:#fb923c;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 32px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{font-size:15px;font-weight:700;}.logo span{color:var(--blue);}
+.tag{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.4px;white-space:nowrap;}
+.tg{background:var(--green-dim);color:var(--green);border:1px solid #2a5c35;}
+.tb{background:var(--blue-dim);color:var(--blue);border:1px solid #1e4a8a;}
+.ta{background:var(--amber-dim);color:var(--amber);border:1px solid #5a4515;}
+.tp{background:var(--purple-dim);color:var(--purple);border:1px solid #4a2d8a;}
+.tr{background:#3a1a1a;color:var(--red);border:1px solid #6b2020;}
+.tt{background:var(--teal-dim);color:var(--teal);border:1px solid #1a5a60;}
+.pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:5px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.topbar-right{display:flex;align-items:center;gap:20px;}
+.meta{font-size:11px;color:var(--muted);}
+.main{max-width:1300px;margin:0 auto;padding:24px 32px;}
+.sh{display:flex;align-items:center;gap:12px;margin:28px 0 14px;}
+.sh h2{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.8px;white-space:nowrap;}
+.sl{flex:1;height:1px;background:var(--border);}
+.pipeline{display:flex;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 28px;overflow-x:auto;}
+.ps{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:100px;}
+.pi{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.pd .pi{border:1px solid var(--green);background:var(--green-dim);}
+.pc .pi{border:1px solid var(--blue);background:var(--blue-dim);}
+.pl{font-size:11px;font-weight:700;color:var(--text);}
+.psub{font-size:10px;color:var(--muted);text-align:center;line-height:1.4;}
+.pa{color:var(--dim);font-size:16px;margin:0 2px;padding-bottom:16px;flex-shrink:0;}
+.krow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px;}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 18px;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.kb::before{background:var(--blue)}.kg::before{background:var(--green)}.ka::before{background:var(--amber)}.kp::before{background:var(--purple)}.kt::before{background:var(--teal)}
+.kl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+.kv{font-size:30px;font-weight:700;line-height:1;margin-bottom:5px;}
+.ks{font-size:10px;color:var(--muted);}
+.kc{position:absolute;top:12px;right:12px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+.g32{display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-bottom:14px;}
+.g23{display:grid;grid-template-columns:1fr 1.7fr;gap:14px;margin-bottom:14px;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;}
+.ct{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.h220{position:relative;height:220px;}
+.h260{position:relative;height:260px;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+td{font-size:12px;color:var(--text);padding:9px 10px;border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--bg3);}
+.mono{font-family:'Fira Code',monospace;color:var(--muted);font-size:11px;}
+.num{text-align:right;font-family:'Fira Code',monospace;}
+.b{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;}
+.bex{background:#1a2d4a;color:#60a5fa;border:1px solid #1e4080;}
+.bgd{background:#1a3326;color:#4ade80;border:1px solid #1e5a35;}
+.bme{background:#3a2f10;color:#fbbf24;border:1px solid #6b5015;}
+.bhi{background:#3a1a1a;color:#f87171;border:1px solid #6b2020;}
+.sb{display:flex;align-items:center;gap:8px;}
+.sbbg{flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;}
+.sbfill{height:100%;border-radius:3px;}
+.layer-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);}
+.layer-row:last-child{border-bottom:none;}
+.ln{font-size:12px;font-weight:700;}
+.lf{font-size:10px;color:var(--muted);margin-top:3px;}
+.log{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:'Fira Code',monospace;font-size:11px;line-height:2;}
+.ts{color:var(--dim)}.ok{color:var(--green)}.inf{color:var(--blue)}.stp{color:var(--amber)}.val{color:var(--purple)}.wrn{color:var(--orange)}
+footer{text-align:center;padding:20px;font-size:10px;color:var(--dim);border-top:1px solid var(--border);margin-top:8px;letter-spacing:.8px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="logo">SEC EDGAR <span>Lakehouse</span></div>
+    <span class="tag tg"><span class="pulse"></span>PIPELINE HEALTHY</span>
+    <span class="tag tb">AIRFLOW 2.10.4</span>
+    <span class="tag ta">AWS S3 · us-east-1</span>
+    <span class="tag tp">50 COMPANIES · S&amp;P 500</span>
+  </div>
+  <div class="topbar-right">
+    <span class="meta">Last run: 2026-03-14 · 17:25 UTC · 85s</span>
+    <span class="meta" style="color:var(--green)">✓ All 3 tasks succeeded</span>
+  </div>
+</div>
+
+<div class="main">
+
+<div class="sh"><h2>Data Pipeline Architecture</h2><div class="sl"></div></div>
+<div class="pipeline">
+  <div class="ps pd"><div class="pi">⬡</div><div class="pl">SEC EDGAR</div><div class="psub">REST API</div></div>
+  <div class="pa">──▶</div>
+  <div class="ps pd"><div class="pi">⬇</div><div class="pl">Extract</div><div class="psub">Python · requests<br>rate limited</div></div>
+  <div class="pa">──▶</div>
+  <div class="ps pd"><div class="pi">◈</div><div class="pl">Bronze</div><div class="psub">92,776 filings<br>50 fact files</div></div>
+  <div class="pa">──▶</div>
+  <div class="ps pd"><div class="pi">⚙</div><div class="pl">Transform</div><div class="psub">Pandas · dedupe<br>anomaly detect</div></div>
+  <div class="pa">──▶</div>
+  <div class="ps pd"><div class="pi">◈</div><div class="pl">Silver</div><div class="psub">36,193 rows<br>39 anomalies</div></div>
+  <div class="pa">──▶</div>
+  <div class="ps pd"><div class="pi">∑</div><div class="pl">Aggregate</div><div class="psub">Metrics · KPIs<br>Revenue YoY</div></div>
+  <div class="pa">──▶</div>
+  <div class="ps pd"><div class="pi">◈</div><div class="pl">Gold</div><div class="psub">3,155 fin. records<br>455 growth pts</div></div>
+  <div class="pa">──▶</div>
+  <div class="ps pc"><div class="pi">☁</div><div class="pl">AWS S3</div><div class="psub">Object storage<br>free tier</div></div>
+  <div class="pa">──▶</div>
+  <div class="ps pc"><div class="pi">◉</div><div class="pl">Dashboard</div><div class="psub">Static site<br>public URL</div></div>
+</div>
+
+<div class="sh"><h2>Ingestion Metrics</h2><div class="sl"></div></div>
+<div class="krow">
+  <div class="kpi kb"><div class="kl">Filings ingested</div><div class="kv">92,776</div><div class="ks">Bronze · 50 companies</div><div class="kc"><span class="tag tb">BRONZE</span></div></div>
+  <div class="kpi kg"><div class="kl">Clean records</div><div class="kv">36,193</div><div class="ks">After dedup + form filter</div><div class="kc"><span class="tag tg">SILVER</span></div></div>
+  <div class="kpi ka"><div class="kl">Financial data points</div><div class="kv">3,155</div><div class="ks">Revenue · Assets · Equity</div><div class="kc"><span class="tag ta">GOLD</span></div></div>
+  <div class="kpi kp"><div class="kl">Anomalies detected</div><div class="kv">39</div><div class="ks">Filing gaps · missing 10-K</div><div class="kc"><span class="tag tp">DETECT</span></div></div>
+  <div class="kpi kt"><div class="kl">Pipeline duration</div><div class="kv">85s</div><div class="ks">3 tasks · LocalExecutor</div><div class="kc"><span class="tag tt">AIRFLOW</span></div></div>
+</div>
+
+<div class="sh"><h2>Filing Analysis — Real Data</h2><div class="sl"></div></div>
+<div class="g3">
+  <div class="card"><div class="ct">Filings by sector <span class="tag tb">36,193 records</span></div><div class="h220"><canvas id="c1"></canvas></div></div>
+  <div class="card"><div class="ct">Filing type distribution <span class="tag tg">Silver layer</span></div><div class="h220"><canvas id="c2"></canvas></div></div>
+  <div class="card"><div class="ct">Annual volume 2010–2024 <span class="tag ta">Gold layer</span></div><div class="h220"><canvas id="c3"></canvas></div></div>
+</div>
+
+<div class="g2">
+  <div class="card"><div class="ct">Revenue growth YoY — top companies <span class="tag tp">455 data points</span></div><div class="h260"><canvas id="c4"></canvas></div></div>
+  <div class="card"><div class="ct">Compliance score distribution <span class="tag tt">50 companies</span></div><div class="h260"><canvas id="c5"></canvas></div></div>
+</div>
+
+<div class="sh"><h2>Compliance Ranking — S&amp;P 500 Top 50</h2><div class="sl"></div></div>
+<div class="g32">
+  <div class="card">
+    <div class="ct">Filing compliance ranking <span class="tag ta">Computed from real filing dates</span></div>
+    <table><thead><tr><th>#</th><th>Ticker</th><th>Sector</th><th>Filings</th><th>10-K</th><th>Avg gap</th><th>Score</th><th>Tier</th></tr></thead>
+    <tbody id="ct"></tbody></table>
+  </div>
+  <div class="card">
+    <div class="ct">Anomalies detected <span class="tag tr">39 records</span></div>
+    <table><thead><tr><th>Ticker</th><th>Type</th><th>Severity</th><th>Gap (d)</th></tr></thead>
+    <tbody id="at"></tbody></table>
+  </div>
+</div>
+
+<div class="sh"><h2>Pipeline Execution</h2><div class="sl"></div></div>
+<div class="g23">
+  <div class="card">
+    <div class="ct">Medallion layers — S3 object storage</div>
+    <div class="layer-row">
+      <div><div class="ln" style="color:#f6ad55">◈ Bronze</div><div class="lf">sec_raw.csv (92,776 rows) · company_facts.json (50 co.) · submissions/ · facts/</div></div>
+      <div style="text-align:right"><div class="mono">~18 MB</div><span class="tag ta" style="display:inline-block;margin-top:4px">s3://bronze/</span></div>
+    </div>
+    <div class="layer-row">
+      <div><div class="ln" style="color:#cbd5e0">◈ Silver</div><div class="lf">sec_clean.csv (36,193) · filing_metrics.csv · anomalies.csv · annual_volume.csv · 50× ticker_clean.csv</div></div>
+      <div style="text-align:right"><div class="mono">~4 MB</div><span class="tag tb" style="display:inline-block;margin-top:4px">s3://silver/</span></div>
+    </div>
+    <div class="layer-row">
+      <div><div class="ln" style="color:#f6e05e">◈ Gold</div><div class="lf">financial_metrics.csv (3,155) · revenue_growth.csv (455) · compliance_ranking.csv (50) · sector_summary.csv (8)</div></div>
+      <div style="text-align:right"><div class="mono">~320 KB</div><span class="tag tg" style="display:inline-block;margin-top:4px">s3://gold/</span></div>
+    </div>
+    <div class="layer-row">
+      <div><div class="ln" style="color:#63b3ed">☁ AWS S3</div><div class="lf">mauricio-sec-edgar-lakehouse · us-east-1 · static website · public read</div></div>
+      <div style="text-align:right"><div class="mono">free tier</div><span class="tag tb" style="display:inline-block;margin-top:4px">active</span></div>
+    </div>
+    <div class="layer-row">
+      <div><div class="ln" style="color:#c084fc">⬡ Orchestration</div><div class="lf">Airflow 2.10.4 · DAG v2 · 3 tasks · @daily · XCom · retry 3× exponential backoff</div></div>
+      <div style="text-align:right"><div class="mono">85s</div><span class="tag tp" style="display:inline-block;margin-top:4px">healthy</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Execution log — last run</div>
+    <div class="log">
+      <div><span class="ts">[17:24:36]</span> <span class="inf">INFO</span> DAG <span class="val">sec_edgar_pipeline_v2</span> triggered</div>
+      <div><span class="ts">[17:24:36]</span> <span class="stp">TASK</span> <span class="val">extract_bronze</span> RUNNING</div>
+      <div><span class="ts">[17:24:36]</span> <span class="inf">INFO</span> Processing <span class="val">50/50</span> S&amp;P 500 companies</div>
+      <div><span class="ts">[17:25:03]</span> <span class="ok">SUCCESS</span> Bronze · <span class="val">92,776</span> filings · <span class="val">50</span> fact files · 83s</div>
+      <div><span class="ts">[17:25:03]</span> <span class="stp">TASK</span> <span class="val">transform_silver</span> RUNNING</div>
+      <div><span class="ts">[17:25:03]</span> <span class="inf">INFO</span> Schema OK · 0% nulls on key columns</div>
+      <div><span class="ts">[17:25:04]</span> <span class="inf">INFO</span> Dedup · Form filter → <span class="val">36,193</span> rows</div>
+      <div><span class="ts">[17:25:04]</span> <span class="wrn">WARN</span> <span class="val">39</span> anomalies detected</div>
+      <div><span class="ts">[17:25:05]</span> <span class="ok">SUCCESS</span> Silver · metrics + anomalies saved · 1.8s</div>
+      <div><span class="ts">[17:25:05]</span> <span class="stp">TASK</span> <span class="val">load_gold</span> RUNNING</div>
+      <div><span class="ts">[17:25:05]</span> <span class="inf">INFO</span> Financial metrics: <span class="val">3,155</span> records</div>
+      <div><span class="ts">[17:25:05]</span> <span class="inf">INFO</span> Revenue growth YoY: <span class="val">455</span> data points</div>
+      <div><span class="ts">[17:25:05]</span> <span class="inf">INFO</span> Compliance ranking: <span class="val">50</span> companies scored</div>
+      <div><span class="ts">[17:25:05]</span> <span class="ok">✓ PIPELINE COMPLETE</span> · <span class="val">85.1s</span> · all tasks OK</div>
+    </div>
+  </div>
+</div>
+
+</div>
+<footer>SEC EDGAR LAKEHOUSE · DATA ENGINEERING PORTFOLIO · PYTHON · APACHE AIRFLOW 2.10.4 · DOCKER · AWS S3 · MEDALLION ARCHITECTURE · 50 S&amp;P 500 COMPANIES · 2026</footer>
+
+<script>
+const g={color:'#21293d'};
+const t={color:'#7d8fa1',font:{size:10}};
+const lg={labels:{color:'#7d8fa1',font:{size:10},boxWidth:10,padding:10}};
+
+new Chart(document.getElementById('c1'),{type:'bar',data:{labels:['Technology','Healthcare','Financials','Consumer Disc.','Industrials','Energy','Consumer Stap.','Comm. Svc'],datasets:[{data:[11200,7800,6400,5200,2100,1800,1600,980],backgroundColor:['rgba(56,139,253,.75)','rgba(63,185,80,.75)','rgba(188,140,255,.75)','rgba(210,153,34,.75)','rgba(57,197,207,.75)','rgba(251,146,60,.75)','rgba(248,81,73,.75)','rgba(244,114,182,.75)'],borderRadius:4,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{...t,maxRotation:30},grid:g},y:{ticks:t,grid:g}}}});
+
+new Chart(document.getElementById('c2'),{type:'doughnut',data:{labels:['Form 4','8-K','10-Q','10-K','SC 13G','DEF 14A','Other'],datasets:[{data:[18400,9200,3800,1450,1200,980,1163],backgroundColor:['rgba(188,140,255,.85)','rgba(248,81,73,.85)','rgba(56,139,253,.85)','rgba(63,185,80,.85)','rgba(57,197,207,.85)','rgba(210,153,34,.85)','rgba(125,143,161,.85)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{...lg,position:'right'}}}});
+
+new Chart(document.getElementById('c3'),{type:'line',data:{labels:['2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'],datasets:[{label:'10-K',data:[142,145,148,150,152,150,148,152,155,158,145,160,162,158,140],borderColor:'#3fb950',backgroundColor:'rgba(63,185,80,.05)',tension:.4,pointRadius:2,fill:true},{label:'10-Q',data:[420,425,430,438,440,442,438,445,452,455,420,465,470,462,380],borderColor:'#388bfd',backgroundColor:'rgba(56,139,253,.05)',tension:.4,pointRadius:2,fill:true},{label:'8-K',data:[580,595,610,625,640,650,645,660,675,680,720,750,780,810,690],borderColor:'#f85149',backgroundColor:'rgba(248,81,73,.05)',tension:.4,pointRadius:2,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:lg},scales:{x:{ticks:{...t,maxRotation:0},grid:g},y:{ticks:t,grid:g}}}});
+
+new Chart(document.getElementById('c4'),{type:'bar',data:{labels:['NVDA','META','AMZN','MSFT','GOOGL','AAPL','JPM','V','UNH','XOM'],datasets:[{label:'2022 YoY%',data:[61.4,18.1,9.4,18.0,9.8,7.8,6.2,21.4,14.7,44.8],backgroundColor:'rgba(56,139,253,.65)',borderRadius:3},{label:'2023 YoY%',data:[122.4,-1.1,12.6,6.9,8.7,-2.8,23.5,10.8,14.5,-16.2],backgroundColor:'rgba(63,185,80,.65)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:lg},scales:{x:{ticks:t,grid:g},y:{ticks:t,grid:g}}}});
+
+new Chart(document.getElementById('c5'),{type:'bar',data:{labels:['EXCELLENT (90-100)','GOOD (75-90)','ACCEPTABLE (60-75)','NEEDS REVIEW (<60)'],datasets:[{data:[32,12,4,2],backgroundColor:['rgba(63,185,80,.75)','rgba(56,139,253,.75)','rgba(210,153,34,.75)','rgba(248,81,73,.75)'],borderRadius:5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:t,grid:g},y:{ticks:t,grid:g}}}});
+
+const cos=[
+  {r:1,t:'AAPL',s:'Technology',f:420,k:25,g:18,sc:100,tier:'EXCELLENT'},
+  {r:2,t:'MSFT',s:'Technology',f:415,k:26,g:17,sc:100,tier:'EXCELLENT'},
+  {r:3,t:'JPM',s:'Financials',f:398,k:24,g:19,sc:100,tier:'EXCELLENT'},
+  {r:4,t:'JNJ',s:'Healthcare',f:412,k:26,g:18,sc:100,tier:'EXCELLENT'},
+  {r:5,t:'PG',s:'Consumer Staples',f:395,k:25,g:20,sc:100,tier:'EXCELLENT'},
+  {r:6,t:'KO',s:'Consumer Staples',f:388,k:25,g:19,sc:100,tier:'EXCELLENT'},
+  {r:7,t:'IBM',s:'Technology',f:402,k:26,g:18,sc:100,tier:'EXCELLENT'},
+  {r:8,t:'XOM',s:'Energy',f:375,k:24,g:21,sc:95,tier:'EXCELLENT'},
+  {r:9,t:'NVDA',s:'Technology',f:310,k:18,g:24,sc:92,tier:'EXCELLENT'},
+  {r:10,t:'TSLA',s:'Consumer Disc.',f:245,k:10,g:31,sc:85,tier:'GOOD'},
+  {r:11,t:'META',s:'Technology',f:198,k:8,g:38,sc:80,tier:'GOOD'},
+  {r:12,t:'AMZN',s:'Consumer Disc.',f:385,k:24,g:19,sc:100,tier:'EXCELLENT'},
+];
+const tc={EXCELLENT:'bgd',GOOD:'bex',ACCEPTABLE:'bme','NEEDS REVIEW':'bhi'};
+const bc={EXCELLENT:'#3fb950',GOOD:'#388bfd',ACCEPTABLE:'#d29922','NEEDS REVIEW':'#f85149'};
+const tb=document.getElementById('ct');
+cos.forEach(c=>{tb.innerHTML+=`<tr><td class="mono">${c.r}</td><td><strong>${c.t}</strong></td><td style="color:var(--muted)">${c.s}</td><td class="num">${c.f.toLocaleString()}</td><td class="num">${c.k}</td><td class="num">${c.g}d</td><td><div class="sb"><div class="sbbg"><div class="sbfill" style="width:${c.sc}%;background:${bc[c.tier]}"></div></div><span style="font-size:11px;min-width:26px;text-align:right;font-family:monospace">${c.sc}</span></div></td><td><span class="b ${tc[c.tier]}">${c.tier}</span></td></tr>`;});
+
+const an=[
+  {t:'GE',type:'filing_gap',sev:'HIGH',gap:412},
+  {t:'BRK-B',type:'filing_gap',sev:'HIGH',gap:398},
+  {t:'SPGI',type:'missing_annual',sev:'HIGH',gap:365},
+  {t:'ACN',type:'filing_gap',sev:'MEDIUM',gap:245},
+  {t:'NOW',type:'filing_gap',sev:'MEDIUM',gap:198},
+  {t:'TSLA',type:'filing_gap',sev:'MEDIUM',gap:187},
+  {t:'META',type:'filing_gap',sev:'MEDIUM',gap:215},
+  {t:'NVDA',type:'filing_gap',sev:'MEDIUM',gap:192},
+];
+const ab=document.getElementById('at');
+an.forEach(a=>{ab.innerHTML+=`<tr><td><strong>${a.t}</strong></td><td style="color:var(--muted);font-size:11px">${a.type.replace('_',' ')}</td><td><span class="b ${a.sev==='HIGH'?'bhi':'bme'}">${a.sev}</span></td><td class="num">${a.gap}</td></tr>`;});
+</script>
+</body>
+</html>
