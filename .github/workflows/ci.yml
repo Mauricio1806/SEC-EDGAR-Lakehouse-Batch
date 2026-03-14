@@ -1,0 +1,111 @@
+name: SEC EDGAR Lakehouse CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 8 * * 1'
+
+jobs:
+  test-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pandas requests pytest pyyaml
+
+      - name: Create data directories
+        run: mkdir -p data/bronze data/silver data/gold
+
+      - name: Test extract module imports
+        run: |
+          cd src
+          python -c "from extract import SP500_TOP50, SECTOR_MAP; assert len(SP500_TOP50) == 50; print('SP500_TOP50 OK:', len(SP500_TOP50), 'companies')"
+
+      - name: Test transform module imports
+        run: |
+          cd src
+          python -c "from transform import clean_filings, compute_filing_metrics, detect_anomalies; print('Transform functions OK')"
+
+      - name: Test load module imports
+        run: |
+          cd src
+          python -c "from load import build_revenue_growth, build_compliance_ranking, build_sector_summary; print('Load functions OK')"
+
+      - name: Test schema validation
+        run: |
+          cd src
+          python -c "
+          import pandas as pd
+          from transform import validate_schema
+          df = pd.DataFrame({
+            'accessionNumber': ['0001-test'],
+            'filingDate': ['2024-01-01'],
+            'form': ['10-K'],
+            'ticker': ['AAPL'],
+            'company_name': ['Apple Inc.'],
+            'sector': ['Technology'],
+            'cik': ['0000320193'],
+            'sic': ['3571'],
+            'sic_description': ['Electronic Computers'],
+            'extracted_at': ['2026-01-01']
+          })
+          result = validate_schema(df)
+          assert len(result) > 0
+          print('Schema validation OK:', result.shape)
+          "
+
+      - name: Test anomaly detection
+        run: |
+          cd src
+          python -c "
+          import pandas as pd
+          from transform import detect_anomalies
+          df = pd.DataFrame({
+            'ticker': ['AAPL'] * 5,
+            'filingDate': ['2020-01-01','2020-04-01','2020-07-01','2021-07-01','2021-10-01'],
+            'form': ['10-K','10-Q','10-Q','10-Q','10-Q'],
+            'company_name': ['Apple Inc.'] * 5,
+            'sector': ['Technology'] * 5
+          })
+          result = detect_anomalies(df)
+          print('Anomaly detection OK:', len(result), 'anomalies found')
+          "
+
+      - name: Test compliance scoring
+        run: |
+          cd src
+          python -c "
+          import pandas as pd
+          from transform import compute_filing_metrics
+          df = pd.DataFrame({
+            'ticker': ['AAPL'] * 10,
+            'filingDate': pd.date_range('2020-01-01', periods=10, freq='90D').astype(str),
+            'form': ['10-K','10-Q','10-Q','10-Q','8-K','10-K','10-Q','10-Q','10-Q','8-K'],
+            'company_name': ['Apple Inc.'] * 10,
+            'sector': ['Technology'] * 10,
+            'cik': ['0000320193'] * 10
+          })
+          result = compute_filing_metrics(df)
+          assert len(result) == 1
+          assert result.iloc[0]['compliance_score'] >= 0
+          print('Compliance scoring OK:', result.iloc[0]['compliance_score'])
+          "
+
+      - name: Validate DAG syntax
+        run: python -c "import ast; ast.parse(open('airflow/dags/sec_edgar_dag.py').read()); print('DAG syntax OK')"
+
+      - name: Validate docker-compose syntax
+        run: python -c "import yaml; yaml.safe_load(open('docker-compose.yml')); print('docker-compose.yml syntax OK')"
+
+      - name: All checks passed
+        run: echo 'CI pipeline completed successfully'
