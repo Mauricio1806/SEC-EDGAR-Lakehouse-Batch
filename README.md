@@ -1,126 +1,156 @@
-# SEC EDGAR Lakehouse Batch (Bronze → Silver → Gold)
-DuckDB + Parquet + Airflow + dbt + Great Expectations  
-AWS-Ready Architecture (S3 + Athena | us-east-2 | Free Tier Safe)
+﻿# SEC EDGAR Lakehouse
 
-## Overview
-This repository implements a portfolio-grade Lakehouse Batch architecture using clear Bronze, Silver, and Gold layers.
-It is designed to:
-- Demonstrate real-world Data Engineering patterns used in US-focused environments
-- Be fully reproducible locally (Docker-based execution)
-- Map directly to AWS services (S3 + Athena) while staying Free Tier safe
-- Use a live, official US data source with continuous updates (SEC EDGAR)
+![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square&logo=python)
+![Airflow](https://img.shields.io/badge/Airflow-2.10.4-orange?style=flat-square&logo=apache-airflow)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)
+![AWS](https://img.shields.io/badge/AWS-S3-FF9900?style=flat-square&logo=amazonaws)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
-## Real-World Dataset (Always Current)
-SEC EDGAR (Submissions API + optional XBRL facts)
-- Official EDGAR developer resources confirm JSON APIs on data.sec.gov.
-- Scripted access is allowed with fair-access guidance and request rate limits.
+> End-to-end data engineering pipeline collecting, processing and analyzing SEC EDGAR financial filings for 50 S&P 500 companies using a Medallion Lakehouse architecture.
 
-Why EDGAR:
-- US-market relevance (finance, analytics, compliance workloads)
-- Real operational complexity: incremental ingestion, schema drift, normalization
-- Strong “enterprise” signal for portfolio work
+**[Live Dashboard](http://mauricio-sec-edgar-lakehouse.s3-website-us-east-1.amazonaws.com)** · Python · Apache Airflow · Docker · AWS S3
 
-## Architecture (Logical Flow)
-SEC EDGAR (latest pulls)
-  → Raw (downloaded JSON)
-  → Bronze (raw-ish Parquet, partitioned by ingest_date)
-  → Great Expectations quality gate
-  → dbt transformations → Silver (conformed)
-  → dbt marts → Gold (analytics tables)
-  → DuckDB locally + Athena externally (Phase 1)
+---
 
-## Local Technology Stack
-- Apache Airflow (orchestration)
-- DuckDB (local analytical engine)
-- Parquet + Snappy (columnar storage)
-- dbt-duckdb (transformations + tests)
-- Great Expectations (data validation gate)
-- Docker + Make (reproducible runtime)
+## Architecture
 
-## AWS Cloud Alignment (Phase 1 | Free Tier Safe)
-**Region:** us-east-2  
-**Guardrails:**
-- Use S3 + Athena only (no always-on services)
-- Partitioned data to reduce Athena scan costs
-- Optional: AWS Budgets alert at $1
+Bronze: Raw filings + company facts — 92,776 records — 50 companies
+Silver: Clean data + filing metrics + anomaly detection — 36,193 records
+Gold:   Financial metrics + revenue growth YoY + compliance ranking
+AWS S3: Object storage + static dashboard + free tier
 
-Local → AWS mapping:
-- Local Parquet lake → S3 (bronze/silver/gold prefixes)
-- DuckDB queries → Athena external tables on Gold
-- Airflow (local) → MWAA (conceptual mapping, not deployed in Phase 1)
-- dbt + GE → Glue jobs (optional Phase 2)
+---
 
-## Repository Structure (Target)
-sec-edgar-lakehouse-bsg/
-  README.md
-  RUNBOOK.md
-  Makefile
-  docker-compose.yml
-  requirements.txt
+## Key Metrics
 
-  data/
-    raw/
-    bronze/
-    silver/
-    gold/
-    lakehouse.duckdb
+| Metric | Value |
+|--------|-------|
+| Companies monitored | 50 S&P 500 |
+| Total filings ingested | 92,776 |
+| Clean records (Silver) | 36,193 |
+| Financial data points | 3,155 |
+| Revenue growth records | 455 |
+| Anomalies detected | 39 |
+| Pipeline duration | ~85s |
+| Sectors covered | 8 |
 
-  src/
-    ingest/
-      edgar_submissions_download.py
-      edgar_to_bronze.py
-    ge/
-      ge_run.py
-    utils/
-      config.py
-      paths.py
+---
 
-  airflow/
-    dags/
-      edgar_lakehouse_bsg_dag.py
+## Tech Stack
 
-  dbt/
-    lakehouse_dbt/
-      dbt_project.yml
-      profiles.yml.example
-      models/
-        silver/
-          stg_companies.sql
-          stg_filings.sql
-        gold/
-          mart_filings_daily.sql
-      tests/
-        schema.yml
+| Layer | Technology |
+|-------|-----------|
+| Orchestration | Apache Airflow 2.10.4 + LocalExecutor |
+| Containerization | Docker + Docker Compose |
+| Metadata DB | PostgreSQL 15 |
+| ETL | Python 3.12 + Pandas + Requests |
+| Storage | AWS S3 free tier |
+| Data Source | SEC EDGAR REST API |
+| Dashboard | HTML + Chart.js + S3 Static Website |
 
-  cloud/
-    aws/
-      README.md
-      athena/
-        setup.sql
-        gold_tables.sql
-        queries.sql
-      iam/
-        local_user_policy.json
+---
 
-  scripts/
-    sync_to_s3.ps1
+## Project Structure
 
-## Expected Outputs
-Local:
-- Raw EDGAR JSON under `data/raw/edgar/`
-- Bronze Parquet partitioned by ingest_date under `data/bronze/edgar/`
-- DuckDB database: `data/lakehouse.duckdb`
-- Gold example mart: `mart_filings_daily`
+    SEC_EDGAR_Lakehouse/
+    +-- docker-compose.yml
+    +-- requirements.txt
+    +-- airflow/
+    |   +-- dags/
+    |       +-- sec_edgar_dag.py     # DAG v2 @daily 3 tasks XCom retry
+    +-- src/
+    |   +-- extract.py               # Bronze: 3 endpoints rate limiting
+    |   +-- transform.py             # Silver: validation anomaly detection
+    |   +-- load.py                  # Gold: financial metrics compliance
+    |   +-- main.py                  # Local pipeline runner
+    +-- dashboard/
+    |   +-- index.html               # Live dashboard hosted on S3
+    +-- data/
+        +-- bronze/                  # Raw data gitignored
+        +-- silver/                  # Clean data gitignored
+        +-- gold/                    # Analytical outputs gitignored
 
-AWS (Phase 1):
-- S3 lake storage (bronze/silver/gold prefixes)
-- Athena external tables over Gold
-- Queryable analytics in Athena console
+---
 
-## Quickstart (Local)
-```bash
-make up
-# Airflow UI: http://localhost:8080 (admin/admin)
+## Pipeline Details
 
-make run-local
-make logs
+### Bronze Layer — extract.py
+- Collects 3 SEC EDGAR endpoints per company: submissions, companyfacts, tickers
+- Rate limiting: 0.12s per request to respect SEC API policy
+- HTTP 429 handling with exponential backoff
+- Saves raw JSON per company plus combined CSV
+- Output: 92,776 filing records + 50 company fact files
+
+### Silver Layer — transform.py
+- Schema validation with null percentage reporting per column
+- Deduplication and date type casting
+- Filing frequency metrics: avg days between filings per company
+- Anomaly detection: statistical gap analysis using mean + 2.5 sigma threshold
+- Missing annual report detection per fiscal year
+- Compliance score computed per company (0-100)
+- Output: 36,193 clean records + 39 anomalies detected
+
+### Gold Layer — load.py
+- Financial metrics from XBRL companyfacts: Revenue, NetIncome, Assets, Equity
+- Revenue growth YoY: year-over-year percentage change per company
+- Sector analysis: filing volume by sector 2010-2024
+- Compliance ranking: 50 companies scored and tiered
+- Anomaly summary: aggregated with severity levels HIGH / MEDIUM
+- Output: 5 analytical datasets ready for consumption
+
+---
+
+## How to Run
+
+### Prerequisites
+- Docker Desktop running
+- Python 3.10+
+- AWS CLI configured
+
+### Setup
+
+    git clone https://github.com/Mauricio1806/SEC-EDGAR-Lakehouse-Batch.git
+    cd SEC-EDGAR-Lakehouse-Batch
+
+    mkdir airflow\logs airflow\plugins data\bronze data\silver data\gold
+
+    docker compose up airflow-init
+    docker compose up -d
+
+    pip install -r requirements.txt
+    python src/main.py
+
+### Access Airflow
+
+    URL:      http://localhost:8081
+    Username: admin
+    Password: admin
+
+### Deploy to AWS S3
+
+    aws s3 sync data/bronze/ s3://YOUR-BUCKET/bronze/
+    aws s3 sync data/silver/ s3://YOUR-BUCKET/silver/
+    aws s3 sync data/gold/   s3://YOUR-BUCKET/gold/
+    aws s3 cp dashboard/index.html s3://YOUR-BUCKET/index.html --content-type text/html
+
+---
+
+## SEC EDGAR API
+
+| Endpoint | Usage |
+|----------|-------|
+| /submissions/CIK{cik}.json | Filing history per company |
+| /api/xbrl/companyfacts/CIK{cik}.json | Financial facts Revenue Assets Equity |
+| /files/company_tickers.json | Ticker to CIK mapping |
+
+Rate limit: 10 requests per second. This pipeline uses 0.12s delay between requests.
+
+---
+
+## License
+
+MIT License
+
+---
+
+Built as a data engineering portfolio project 2026
