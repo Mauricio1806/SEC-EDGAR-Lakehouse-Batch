@@ -1,4 +1,4 @@
-﻿"""
+"""
 SEC EDGAR Lakehouse — Airflow DAG v2
 Bronze -> Silver -> Gold | 50 companies | @daily
 """
