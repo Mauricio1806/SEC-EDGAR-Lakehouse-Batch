@@ -147,10 +147,9 @@ Rate limit: 10 requests per second. This pipeline uses 0.12s delay between reque
 
 ---
 
-## License
+## 👨‍💻 Author
 
-MIT License
+**Mauricio Esquivel**
+Data Engineer | Analytics Engineer
 
----
-
-Built as a data engineering portfolio project 2026
+Focus: Lakehouse Architecture, Orchestration, Cloud Data Platforms
